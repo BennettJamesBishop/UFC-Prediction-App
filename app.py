@@ -44,25 +44,35 @@ def create_matchup_data(fighter1, fighter2):
 # Title
 st.title('UFC Fight Predictor')
 
-# Fighter Selection
-fighter_list = fighter_stats['name'].tolist()
-fighter1 = st.selectbox('Select Red Fighter:', fighter_list)
-fighter2 = st.selectbox('Select Blue Fighter:', fighter_list)
+# Fighter Selection in columns
+col1, col2 = st.columns(2)
+with col1:
+    fighter1 = st.selectbox('Select Red Fighter:', fighter_stats['name'])
+with col2:
+    fighter2 = st.selectbox('Select Blue Fighter:', fighter_stats['name'])
 
 # Predict Button
 if st.button('Predict Winner'):
     if fighter1 != fighter2:
-        matchup_data = create_matchup_data(fighter1, fighter2)
+        matchup_data_1 = create_matchup_data(fighter1, fighter2) # Fighter 1 is Red, Fighter 2 is Blue
+        matchup_data_2 = create_matchup_data(fighter2, fighter1) # Fighter 1 is Blue, Fighter 2 is Red
         
         # Use the final model's pipeline to preprocess the data and predict
-        processed_data = final_model.named_steps['preprocessor'].transform(matchup_data)
+        processed_data_1 = final_model.named_steps['preprocessor'].transform(matchup_data_1)
+        processed_data_2 = final_model.named_steps['preprocessor'].transform(matchup_data_2)
         
         # Predict the winner
-        prediction_proba = final_model.named_steps['classifier'].predict_proba(processed_data)[0]
-        winner = 'Red' if prediction_proba[0] > prediction_proba[1] else 'Blue'
-        
-        st.write(f'The predicted winner is: {winner}')
-        st.write(f'Prediction probabilities - Red: {prediction_proba[0]:.2f}, Blue: {prediction_proba[1]:.2f}')
+        prediction_proba_1 = final_model.named_steps['classifier'].predict_proba(processed_data_1)[0]
+        prediction_proba_2 = final_model.named_steps['classifier'].predict_proba(processed_data_2)[0]
+       
+        #Average out two results (Eliminates bias towards blue fighters (data has 66/33 split of blue fighter winning,
+        #instead of retraining model this is my work around lol))
+        red_prediction_proba = (prediction_proba_1[0] + prediction_proba_2[1]) / 2
+        blue_prediction_proba = (prediction_proba_1[1] + prediction_proba_2[0]) / 2
+        winner = 'Red' if red_prediction_proba > blue_prediction_proba else 'Blue'
+        # Change Red and Blue to fighter1 and fighter2 above for better UI
+        st.subheader(f'The predicted winner is: {winner}')
+        st.write(f'Prediction probabilities - Red: {red_prediction_proba:.2f}, Blue: {blue_prediction_proba:.2f}')
     else:
         st.write('Please select two different fighters.')
 
