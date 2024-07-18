@@ -4,6 +4,7 @@ from joblib import load
 from joblib import load
 import streamlit as st
 import requests
+import os
 
 # Load the pre-trained model and fighter data
 final_model = load('prep-RDA/final_rf_model.joblib')
@@ -35,13 +36,15 @@ def create_matchup_data(fighter1, fighter2):
     
     return matchup_data
 
-# Function to fetch prediction from OpenAI API
+# Access the environment variable
+OPENAI_API_KEY = db_username = st.secrets["OPENAI_API_KEY"]
+
 # Function to fetch explanation from OpenAI API
 def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, prediction):
     url = 'https://api.openai.com/v1/chat/completions'
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer ***'
+        'Authorization': f'Bearer {os.getenv("OPENAI_API_KEY")}'
     }
     content = (
         f"Fighter 1: {fighter1}\n"
@@ -99,6 +102,7 @@ with cent_co:
 # Title
 with cent_co:
     st.title('UFC Fight Predictor')
+    st.title(f'Bearer {os.getenv("OPENAI_API_KEY")}')
 
 # Fighter Selection in columns
 col1, col2 = st.columns(2)
