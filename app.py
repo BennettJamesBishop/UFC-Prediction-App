@@ -2,8 +2,10 @@ import streamlit as st
 import pandas as pd
 from joblib import load
 from joblib import load
+import streamlit as st
+import requests
 
-# Load the pre-trained model and data
+# Load the pre-trained model and fighter data
 final_model = load('prep-RDA/final_rf_model.joblib')
 fighter_stats = pd.read_csv('fighter_stats.csv')
 
@@ -33,6 +35,62 @@ def create_matchup_data(fighter1, fighter2):
     
     return matchup_data
 
+# Function to fetch prediction from OpenAI API
+# Function to fetch explanation from OpenAI API
+def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, prediction):
+    url = 'https://api.openai.com/v1/chat/completions'
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer ***'
+    }
+    content = (
+        f"Fighter 1: {fighter1}\n"
+        f"Fighter 2: {fighter2}\n"
+        f"Fighter 1 Data: {fighter1_data}\n"
+        f"Fighter 2 Data: {fighter2_data}\n"
+        f"Prediction: {prediction}\n"
+    )
+    payload = {
+        'model': 'gpt-3.5-turbo',
+        'messages': [
+            {
+                'role': 'system',
+                'content': (
+                    "You are an expert UFC analyst. You will be given the names of two fighters, their respective stats, and the predicted winner of their fight. "
+                    "In about 150 words, your task is to explain the reasoning behind the given prediction based on any five of the provided stats of both fighters. "
+                    "Mention at least five statistics, specifically, the difference in each fighter's respective statistics and how that may influence the fight. "
+                    "Here are the features used in order of their importance to the model, the abbreviation of the feature: "
+                    "1. average strikes landed per minute (SLpM), "
+                    "2. career wins (wins), "
+                    "3. takedown defense (td_def), "
+                    "4. average strikes absorbed per minute (SApM_diff), "
+                    "5. average significant strikes accuracy (sig_str_acc), "
+                    "6. takedown Average (td_avg), "
+                    "7. Age (age): 0.071294, "
+                    "8. Career Losses (losses), "
+                    "9. Striking Defense (str_def), "
+                    "10. Takedown Accuracy (td_acc), "
+                    "11. Submission Average (sub_avg), "
+                    "12. Reach (reach), "
+                    "13. Weight (weight), "
+                    "14. Height (height), "
+                    "For all of these, except for age, average strikes absorbed per minute and height, having a higher value is better, "
+                    "Do not make your own prediction; just explain the provided one. "
+                    
+            )
+            },
+            {
+                'role': 'user',
+                'content': content
+            }
+        ],
+        'max_tokens': 200,
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
+    return data['choices'][0]['message']['content']
 
 left_co, cent_co,last_co = st.columns(3)
 with cent_co:
@@ -70,11 +128,22 @@ if st.button('Predict Winner'):
         winner = fighter1 if fighter1_prediction_proba > fighter2_prediction_proba else fighter2
                 # Change Red and Blue to fighter1 and fighter2 above for better UI
         st.subheader(f'The predicted winner is: {winner}')
+
+        #Get individual fighter data again for GPT explanation
+        fighter1_data = fighter_stats[fighter_stats['name'] == fighter1].iloc[0]
+        fighter2_data = fighter_stats[fighter_stats['name'] == fighter2].iloc[0]
         if winner == fighter1:
             st.write(f'{fighter1} has a {100 * fighter1_prediction_proba:.2f}% chance of winning')
+            winner_for_gpt = fighter1
+            explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
+            st.write(explanation)
         else:
             st.write(f'{fighter2} has a {100 * fighter2_prediction_proba:.2f}% chance of winning')
-else:
-    st.write('Please select two different fighters.')
+            winner_for_gpt = fighter2
+            explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
+            st.write(explanation)
+    else:
+        st.write('Please select two different fighters.')
+
 
 # To run this Streamlit app, save it in a file (e.g., app.py) and run `streamlit run app.py` in your terminal.
