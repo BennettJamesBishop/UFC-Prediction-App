@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 from joblib import load
 from joblib import load
+from openai import OpenAI
+import os
+import streamlit as st
+import requests
 
 # Load the pre-trained model and data
 final_model = load('prep-RDA/final_rf_model.joblib')
@@ -33,6 +37,46 @@ def create_matchup_data(fighter1, fighter2):
     
     return matchup_data
 
+# Function to fetch prediction from OpenAI API
+# Function to fetch explanation from OpenAI API
+def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, prediction):
+    url = 'https://api.openai.com/v1/chat/completions'
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer *deleting for first commit until I can store secretly*'
+    }
+    content = (
+        f"Fighter 1: {fighter1}\n"
+        f"Fighter 2: {fighter2}\n"
+        f"Fighter 1 Data: {fighter1_data}\n"
+        f"Fighter 2 Data: {fighter2_data}\n"
+        f"Prediction: {prediction}\n"
+    )
+    payload = {
+        'model': 'gpt-3.5-turbo',
+        'messages': [
+            {
+                'role': 'system',
+                'content': (
+                "You are an expert UFC analyst. You will be given the names of two fighters, their respective stats, and the predicted winner of their fight. "
+                "Your task is to explain the reasoning behind the given prediction based on the provided stats of both fighters. "
+                "Analyze the stats differences and provide a detailed explanation as to why the predicted winner is likely to win the fight. "
+                "Do not make your own prediction; just explain the provided one."
+            )
+            },
+            {
+                'role': 'user',
+                'content': content
+            }
+        ],
+        'max_tokens': 150,
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
+    return data['choices'][0]['message']['content']
+
 
 left_co, cent_co,last_co = st.columns(3)
 with cent_co:
@@ -41,6 +85,7 @@ with cent_co:
 # Title
 with cent_co:
     st.title('UFC Fight Predictor')
+    
 
 # Fighter Selection in columns
 col1, col2 = st.columns(2)
@@ -70,11 +115,30 @@ if st.button('Predict Winner'):
         winner = fighter1 if fighter1_prediction_proba > fighter2_prediction_proba else fighter2
                 # Change Red and Blue to fighter1 and fighter2 above for better UI
         st.subheader(f'The predicted winner is: {winner}')
+
+        #Get individual fighter data again for GPT explanation
+        fighter1_data = fighter_stats[fighter_stats['name'] == fighter1].iloc[0]
+        fighter2_data = fighter_stats[fighter_stats['name'] == fighter2].iloc[0]
         if winner == fighter1:
             st.write(f'{fighter1} has a {100 * fighter1_prediction_proba:.2f}% chance of winning')
+            winner_for_gpt = fighter1
+            explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
+            st.write('Explanation:', explanation)
         else:
             st.write(f'{fighter2} has a {100 * fighter2_prediction_proba:.2f}% chance of winning')
+            winner_for_gpt = fighter2
+            explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
+            st.write('Explanation:', explanation)
 else:
     st.write('Please select two different fighters.')
+
+
+
+
+
+
+
+    # Assuming you have a function to update the thread summary in your database
+   
 
 # To run this Streamlit app, save it in a file (e.g., app.py) and run `streamlit run app.py` in your terminal.
