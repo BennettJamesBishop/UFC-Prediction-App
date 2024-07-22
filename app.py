@@ -54,7 +54,7 @@ def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, p
         f"Prediction: {prediction}\n"
     )
     payload = {
-        'model': 'gpt-3.5-turbo',
+        'model': 'gpt-4o-mini',
         'messages': [
             {
                 'role': 'system',
@@ -77,8 +77,10 @@ def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, p
                     "12. Reach (reach), "
                     "13. Weight (weight), "
                     "14. Height (height), "
-                    "For all of these, except for age, average strikes absorbed per minute and height, having a higher value is better, "
+                    "For all of these, except for average strikes absorbed per minute, having a higher value is better. "
+                    "If the two fighter's weights are very different, mention that this model does not take weight into account. "
                     "Do not make your own prediction; just explain the provided one. "
+                    "Make sure to end your summary at the end of a sentence. "
                     
             )
             },
@@ -87,13 +89,31 @@ def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, p
                 'content': content
             }
         ],
-        'max_tokens': 200,
+        'max_tokens': 300,
     }
 
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     data = response.json()
     return data['choices'][0]['message']['content']
+
+#Comment back in to have cage as background
+# background_image = """
+# <style>
+# [data-testid="stAppViewContainer"] > .main {
+#     background-image: url('https://ufcprediction.s3.us-east-2.amazonaws.com/ufc-octagon.png');
+#     background-size: 100vw 100vh;  # This sets the size to cover 100% of the viewport width and height
+#     background-position: center;  
+#     background-repeat: no-repeat;
+# }
+# </style>
+# """
+
+# st.markdown(background_image, unsafe_allow_html=True)
+
+
+
+
 
 left_co, cent_co,last_co = st.columns(3)
 with cent_co:
@@ -102,14 +122,13 @@ with cent_co:
 # Title
 with cent_co:
     st.title('UFC Fight Predictor')
-    st.title(f'Bearer {os.getenv("OPENAI_API_KEY")}')
 
 # Fighter Selection in columns
 col1, col2 = st.columns(2)
 with col1:
-    fighter1 = st.selectbox('Select Red Fighter:', fighter_stats['name'])
+    fighter1 = st.selectbox(':red[Select Red Fighter:]', fighter_stats['name'])
 with col2:
-    fighter2 = st.selectbox('Select Blue Fighter:', fighter_stats['name'])
+    fighter2 = st.selectbox(':blue[Select Blue Fighter:]', fighter_stats['name'])
 
 # Predict Button
 if st.button('Predict Winner'):
@@ -130,18 +149,18 @@ if st.button('Predict Winner'):
         fighter1_prediction_proba = (prediction_proba_1[0] + prediction_proba_2[1]) / 2
         fighter2_prediction_proba = (prediction_proba_1[1] + prediction_proba_2[0]) / 2
         winner = fighter1 if fighter1_prediction_proba > fighter2_prediction_proba else fighter2
-                # Change Red and Blue to fighter1 and fighter2 above for better UI
-        st.subheader(f'The predicted winner is: {winner}')
 
         #Get individual fighter data again for GPT explanation
         fighter1_data = fighter_stats[fighter_stats['name'] == fighter1].iloc[0]
         fighter2_data = fighter_stats[fighter_stats['name'] == fighter2].iloc[0]
         if winner == fighter1:
+            st.subheader(f'The predicted winner is: :red[{winner}]')
             st.write(f'{fighter1} has a {100 * fighter1_prediction_proba:.2f}% chance of winning')
             winner_for_gpt = fighter1
             explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
             st.write(explanation)
         else:
+            st.subheader(f'The predicted winner is: :blue[{winner}]')
             st.write(f'{fighter2} has a {100 * fighter2_prediction_proba:.2f}% chance of winning')
             winner_for_gpt = fighter2
             explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
