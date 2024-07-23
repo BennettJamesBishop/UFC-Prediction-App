@@ -2,4 +2,6 @@ streamlit
 joblib
 pandas
 requests
-sklearn
+sklearn.model_selection
+sklearn.ensemble
+sklearn.pipeline
