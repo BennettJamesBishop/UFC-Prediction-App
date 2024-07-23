@@ -110,10 +110,6 @@ def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, p
 
 # st.markdown(background_image, unsafe_allow_html=True)
 
-
-
-
-
 left_co, cent_co,last_co = st.columns(3)
 with cent_co:
     st.image('logo.jpg', caption=None, width=200, use_column_width=None)
@@ -156,14 +152,16 @@ if st.button('Predict Winner'):
             st.subheader(f'The predicted winner is: :red[{winner}]')
             st.write(f'{fighter1} has a {100 * fighter1_prediction_proba:.2f}% chance of winning')
             winner_for_gpt = fighter1
-            explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
-            st.write(explanation)
+            
         else:
             st.subheader(f'The predicted winner is: :blue[{winner}]')
             st.write(f'{fighter2} has a {100 * fighter2_prediction_proba:.2f}% chance of winning')
             winner_for_gpt = fighter2
+           
+         # Fetch and display explanation with a spinner
+        with st.spinner('Generating AI explanation...'):
             explanation = fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, winner_for_gpt)
-            st.write(explanation)
+        st.markdown(explanation)
     else:
         st.write('Please select two different fighters.')
 
