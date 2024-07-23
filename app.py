@@ -76,7 +76,6 @@ def fetch_openai_explanation(fighter1, fighter2, fighter1_data, fighter2_data, p
                     "12. Reach (reach), "
                     "13. Weight (weight), "
                     "14. Height (height), "
-                    "For all of these, except for average strikes absorbed per minute, having a higher value is better. "
                     "If the two fighter's weights are very different, mention that this model does not take weight into account. "
                     "Do not make your own prediction; just explain the provided one. "
                     "Make sure to end your summary at the end of a sentence. "
